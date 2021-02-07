@@ -17,3 +17,7 @@ dir_map.update(dict.fromkeys(
 dir_map.update(dict.fromkeys(
     ['.key', '.odp', '.pps', '.ppt', '.pptx'], 'Docs' + os.sep + 'Presentations'))
 
+# Images
+dir_map.update(dict.fromkeys(['.ai', '.bmp', '.gif', '.ico', '.jpeg',
+                              '.jpg', '.png', '.ps', '.psd', '.svg', '.tif', '.tiff'], 'Images'))
+
