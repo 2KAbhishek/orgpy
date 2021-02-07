@@ -37,3 +37,13 @@ dir_map.update(dict.fromkeys(['.7z', '.arj', '.bz2',  '.gz', '.lz4',
 dir_map.update(dict.fromkeys(
     ['.apk', '.bin', '.deb', '.exe', '.jar', '.msi', '.rpm'], 'Programs'))
 
+# Initialize parser
+parser = argparse.ArgumentParser(prog="orgy", description="Organize yor digital mess.",
+                                 epilog="Visit github.com/2KAbhishek/orgy for more.")
+
+# Optional path
+parser.add_argument("-p", "--path", metavar="path", type=str,
+                    help="The directory path to organize.")
+
+args = parser.parse_args()
+
