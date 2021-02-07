@@ -45,6 +45,9 @@ dir_map.update(dict.fromkeys(['.c', '.cpp', '.java', '.py', '.js', '.class', '.h
 dir_map.update(dict.fromkeys(
     ['.md', '.html', '.xml', '.xhtml', '.mhtml'], 'Code' + os.sep + 'Markup'))
 
+# Database
+dir_map.update(dict.fromkeys(
+    ['.sql', '.db', '.json', '.csv'], 'Code' + os.sep + 'Database'))
 
 # Initialize parser
 parser = argparse.ArgumentParser(prog="orgy", description="Organize yor digital mess.",
