@@ -54,3 +54,19 @@ if args.path and os.path.exists(args.path):
     path = args.path
 
 
+# Main organize method
+def organize(path: str) -> None:
+    for file in os.listdir(path):
+        file_name, ext = os.path.splitext(os.path.join(path, file))
+        try:
+            if not os.path.exists(os.path.join(path, dir_map[ext])):
+                os.makedirs(os.path.join(path, dir_map[ext]))
+
+            os.replace(os.path.join(path, file),
+                       os.path.join(path, dir_map[ext], file))
+
+            print("Moved: " + file + " -> " +
+                  os.path.join(dir_map[ext], file))
+        except:
+            print("Skipped: " + file)
+
