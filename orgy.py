@@ -11,7 +11,7 @@ dir_map.update(dict.fromkeys(
 
 # Sheets
 dir_map.update(dict.fromkeys(
-    ['.csv', '.ods', '.xls', '.xlsm', '.xlsx'], 'Docs' + os.sep + 'Sheets'))
+    ['.ods', '.xls', '.xlsm', '.xlsx'], 'Docs' + os.sep + 'Sheets'))
 
 # Presentations
 dir_map.update(dict.fromkeys(
@@ -36,6 +36,11 @@ dir_map.update(dict.fromkeys(['.7z', '.arj', '.bz2',  '.gz', '.lz4',
 # Programs
 dir_map.update(dict.fromkeys(
     ['.apk', '.bin', '.deb', '.exe', '.jar', '.msi', '.rpm'], 'Programs'))
+
+# Code
+dir_map.update(dict.fromkeys(['.c', '.cpp', '.java', '.py', '.js', '.class', '.h', '.sh', '.bat',
+                              '.go', '.rs', '.cs', '.swift', '.r', '.php', '.dart', '.kt', '.mat', '.pl', '.rb', '.scala'], 'Code'))
+
 
 # Initialize parser
 parser = argparse.ArgumentParser(prog="orgy", description="Organize yor digital mess.",
