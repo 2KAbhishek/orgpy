@@ -38,8 +38,12 @@ dir_map.update(dict.fromkeys(
     ['.apk', '.bin', '.deb', '.exe', '.jar', '.msi', '.rpm'], 'Programs'))
 
 # Code
-dir_map.update(dict.fromkeys(['.c', '.cpp', '.java', '.py', '.js', '.class', '.h', '.sh', '.bat',
+dir_map.update(dict.fromkeys(['.c', '.cpp', '.java', '.py', '.js', '.class', '.h', '.sh', '.bat', '.css',
                               '.go', '.rs', '.cs', '.swift', '.r', '.php', '.dart', '.kt', '.mat', '.pl', '.rb', '.scala'], 'Code'))
+
+# Markup
+dir_map.update(dict.fromkeys(
+    ['.md', '.html', '.xml', '.xhtml', '.mhtml'], 'Code' + os.sep + 'Markup'))
 
 
 # Initialize parser
