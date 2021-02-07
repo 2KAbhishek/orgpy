@@ -9,3 +9,7 @@ dir_map = {'.txt': 'Docs', '.pdf': 'Docs' + os.sep + 'PDF'}
 dir_map.update(dict.fromkeys(
     ['.doc', '.docx', '.odt', 'rtf'], 'Docs' + os.sep + 'Word'))
 
+# Spreadsheets
+dir_map.update(dict.fromkeys(
+    ['.csv', '.ods', '.xls', '.xlsm', '.xlsx'], 'Docs' + os.sep + 'Sheets'))
+
