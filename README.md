@@ -8,43 +8,50 @@
 ![Contributors](https://img.shields.io/github/contributors/2kabhishek/orgy?style=plastic&color=f0f&label=Contributors)
 ![License](https://img.shields.io/github/license/2kabhishek/orgy?style=plastic&color=555&label=License)
 
-orgy is a `<utility/tool/feature>` that allows `<insert_target_audience>` to do `<action/task_it_does>`.
+orgy is a `utility` that allows you to quickly organize your files in a predefined structure
 
 ## Prerequisites
 
 Before you begin, ensure you have met the following requirements:
 
-- You have installed the latest version of `<coding_language/dependency/requirement_1>`
+- You have installed the latest version of `python3`
 
-## Installing orgy
+## Installing backlog
 
 To install orgy, follow these steps:
 
 ```bash
 git clone https://github.com/2kabhishek/orgy
 cd orgy
-<install_command>
+# Setup symlink, make sure target directory is added to PATH
+ln -sfnv "$PWD/orgy.py" ~/Applications/bin/orgy
 ```
 
 ## Using orgy
 
 ```bash
 USAGE:
-    command [FLAGS] [OPTIONS]
+    orgy [-h] [-p path]
 
-FLAGS:
-    -h, --help              Prints help information.
+Organize yor digital mess.
 
-OPTIONS:
-    -o, --option <value>    Option description. Options are: a, b. [default: a]
+optional arguments:
+  -h, --help            show this help message and exit
+  -p path, --path path  The directory path to organize.
+  [Default: current working directory]
+
+Visit github.com/2KAbhishek/orgy for more.
+
+EXAMPLE:
+orgy ~/Downloads # Organizes your downloads directory
 
 ```
 
 ### To-Do
 
 - [x] Setup repo
-- [ ] Think real hard
-- [ ] Start typing
+- [ ] Add colors
+- [ ] Add better configuration system
 
 Hit the :star: button if you found this useful.
 
