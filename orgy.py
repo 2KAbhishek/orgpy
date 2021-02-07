@@ -33,3 +33,7 @@ dir_map.update(dict.fromkeys(['.3g2', '.3gp', '.avi', '.flv', '.h264', '.m4v',
 dir_map.update(dict.fromkeys(['.7z', '.arj', '.bz2',  '.gz', '.lz4',
                               '.rar', '.tar', '.xz', '.z', '.zip', '.zstd'], 'Archives'))
 
+# Programs
+dir_map.update(dict.fromkeys(
+    ['.apk', '.bin', '.deb', '.exe', '.jar', '.msi', '.rpm'], 'Programs'))
+
