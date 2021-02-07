@@ -21,3 +21,7 @@ dir_map.update(dict.fromkeys(
 dir_map.update(dict.fromkeys(['.ai', '.bmp', '.gif', '.ico', '.jpeg',
                               '.jpg', '.png', '.ps', '.psd', '.svg', '.tif', '.tiff'], 'Images'))
 
+# Audio
+dir_map.update(dict.fromkeys(
+    ['.aif', '.cda', '.mid', '.mp3', '.mpa', '.ogg', '.wav', '.wma', '.wpl'], 'Audio'))
+
