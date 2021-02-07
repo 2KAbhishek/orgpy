@@ -47,3 +47,10 @@ parser.add_argument("-p", "--path", metavar="path", type=str,
 
 args = parser.parse_args()
 
+# Use current dir if path is not specified or incorrect
+path = os.getcwd()
+
+if args.path and os.path.exists(args.path):
+    path = args.path
+
+
