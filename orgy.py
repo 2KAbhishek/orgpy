@@ -70,3 +70,9 @@ def organize(path: str) -> None:
         except:
             print("Skipped: " + file)
 
+
+if input("Organize directory: " + os.path.basename(path) + " ? -> ") in ['y', 'Y', 'yes', 'Yes']:
+    organize(path)
+    print(os.listdir(path))
+else:
+    print("OK, Bye!")
