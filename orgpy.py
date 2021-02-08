@@ -50,8 +50,8 @@ dir_map.update(dict.fromkeys(
     ['.sql', '.db', '.json', '.csv'], 'Code' + os.sep + 'Database'))
 
 # Initialize parser
-parser = argparse.ArgumentParser(prog="orgy", description="Organize yor digital mess.",
-                                 epilog="Visit github.com/2KAbhishek/orgy for more.")
+parser = argparse.ArgumentParser(prog="orgpy", description="Organize yor digital mess.",
+                                 epilog="Visit github.com/2KAbhishek/orgpy for more.")
 
 # Optional path
 parser.add_argument("-p", "--path", metavar="path", type=str,
