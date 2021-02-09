@@ -54,7 +54,7 @@ parser = argparse.ArgumentParser(prog="orgpy", description="Organize yor digital
                                  epilog="Visit github.com/2KAbhishek/orgpy for more.")
 
 # Optional path
-parser.add_argument("-p", "--path", metavar="path", type=str,
+parser.add_argument("-p", "--path", metavar="path", type=str, default=os.getcwd(),
                     help="The directory path to organize.")
 
 args = parser.parse_args()
