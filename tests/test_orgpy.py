@@ -1,14 +1,158 @@
 #!/usr/bin/env python3
 """Test suite for orgpy - File organization utility."""
 
+import json
 import os
 import sys
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import orgpy
+
+
+class TestConfigSystem(unittest.TestCase):
+    """Test the configuration system."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.temp_dir = tempfile.mkdtemp()
+        self.test_config_file = os.path.join(self.temp_dir, 'test_config.json')
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        for root, dirs, files in os.walk(self.temp_dir, topdown=False):
+            for file in files:
+                os.remove(os.path.join(root, file))
+            for dir in dirs:
+                os.rmdir(os.path.join(root, dir))
+        os.rmdir(self.temp_dir)
+
+    def test_load_config_nonexistent_file(self):
+        """Test loading config when file doesn't exist."""
+        with patch.object(orgpy, 'CONFIG_FILE', Path('/nonexistent/config.json')):
+            config = orgpy.load_config()
+            self.assertEqual(config, {})
+
+    def test_load_config_valid_file(self):
+        """Test loading valid config file."""
+        test_config = {
+            "file_categories": {
+                "TestDocs": [".test", ".spec"],
+                "MyFiles": [".my", ".custom"]
+            }
+        }
+
+        with open(self.test_config_file, 'w') as f:
+            json.dump(test_config, f)
+
+        with patch.object(orgpy, 'CONFIG_FILE', Path(self.test_config_file)):
+            config = orgpy.load_config()
+            self.assertEqual(config, test_config)
+
+    def test_load_config_invalid_json(self):
+        """Test loading config with invalid JSON."""
+        with open(self.test_config_file, 'w') as f:
+            f.write('{"invalid": json}')
+
+        with patch.object(orgpy, 'CONFIG_FILE', Path(self.test_config_file)):
+            config = orgpy.load_config()
+            self.assertEqual(config, {})
+
+    def test_load_config_from_path_valid(self):
+        """Test loading config from specific path."""
+        test_config = {"file_categories": {"Custom": [".cust"]}}
+
+        with open(self.test_config_file, 'w') as f:
+            json.dump(test_config, f)
+
+        config = orgpy.load_config_from_path(self.test_config_file)
+        self.assertEqual(config, test_config)
+
+    def test_load_config_from_path_nonexistent(self):
+        """Test loading config from nonexistent path."""
+        config = orgpy.load_config_from_path('/nonexistent/config.json')
+        self.assertEqual(config, {})
+
+    def test_merge_categories_empty_config(self):
+        """Test merging with empty config."""
+        config = {}
+        merged = orgpy.merge_categories(config)
+        self.assertEqual(merged, orgpy.DEFAULT_FILE_CATEGORIES)
+
+    def test_merge_categories_with_custom(self):
+        """Test merging with custom categories."""
+        config = {
+            "file_categories": {
+                "CustomDocs": [".mydoc", ".notes"],
+                "Images": [".jpg", ".png"]
+            }
+        }
+
+        merged = orgpy.merge_categories(config)
+
+        self.assertIn("CustomDocs", merged)
+        self.assertEqual(merged["CustomDocs"], [".mydoc", ".notes"])
+
+        self.assertEqual(merged["Images"], [".jpg", ".png"])
+
+        self.assertIn("Audio", merged)
+        self.assertIn("Videos", merged)
+
+    def test_merge_categories_no_file_categories_key(self):
+        """Test merging config without file_categories key."""
+        config = {"other_setting": "value"}
+        merged = orgpy.merge_categories(config)
+        self.assertEqual(merged, orgpy.DEFAULT_FILE_CATEGORIES)
+
+    def test_load_config_auto_create(self):
+        """Test that config is auto-created when it doesn't exist."""
+        test_config_path = Path(self.temp_dir) / 'auto_config.json'
+
+        if test_config_path.exists():
+            test_config_path.unlink()
+
+        with patch.object(orgpy, 'CONFIG_FILE', test_config_path):
+            config = orgpy.load_config()
+
+        self.assertTrue(test_config_path.exists())
+        self.assertIn("file_categories", config)
+        self.assertEqual(config["file_categories"], orgpy.DEFAULT_FILE_CATEGORIES)
+
+    def test_create_default_config(self):
+        """Test default config creation."""
+        test_config_path = Path(self.temp_dir) / 'new_config.json'
+
+        with patch.object(orgpy, 'CONFIG_FILE', test_config_path):
+            orgpy.create_default_config()
+
+        self.assertTrue(test_config_path.exists())
+
+        with open(test_config_path, 'r') as f:
+            config = json.load(f)
+
+        self.assertIn("file_categories", config)
+        self.assertEqual(config["file_categories"], orgpy.DEFAULT_FILE_CATEGORIES)
+
+    def test_build_extension_map(self):
+        """Test building extension map from categories."""
+        categories = {
+            "Docs": [".md", ".txt"],
+            "Images": [".JPG", ".PNG"],
+            "Custom/SubDir": [".custom"]
+        }
+
+        ext_map = orgpy.build_extension_map(categories)
+
+        self.assertEqual(ext_map['.md'], 'Docs')
+        self.assertEqual(ext_map['.txt'], 'Docs')
+        self.assertEqual(ext_map['.jpg'], 'Images')
+        self.assertEqual(ext_map['.png'], 'Images')
+
+        expected_custom_path = 'Custom' + os.sep + 'SubDir'
+        self.assertEqual(ext_map['.custom'], expected_custom_path)
 
 
 class TestCategorizeFile(unittest.TestCase):
