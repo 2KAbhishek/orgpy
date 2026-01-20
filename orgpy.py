@@ -4,7 +4,9 @@ import os
 from collections import defaultdict
 
 # Directory mapping, maps file extensions to directories
-dir_map = {'.txt': 'Docs', '.pdf': 'Docs' + os.sep + 'PDF'}
+dir_map = {'.pdf': 'Docs' + os.sep + 'PDF'}
+
+dir_map.update(dict.fromkeys(['.md', '.txt'], 'Docs'))
 
 # Word files
 dir_map.update(dict.fromkeys(
@@ -20,7 +22,7 @@ dir_map.update(dict.fromkeys(
 
 # Images
 dir_map.update(dict.fromkeys(['.ai', '.bmp', '.gif', '.ico', '.jpeg',
-                              '.jpg', '.png', '.ps', '.psd', '.svg', '.tif', '.tiff'], 'Images'))
+                              '.jpg', '.png', '.ps', '.psd', '.svg', '.tif', '.tiff', '.webp'], 'Images'))
 
 # Audio
 dir_map.update(dict.fromkeys(
@@ -44,7 +46,7 @@ dir_map.update(dict.fromkeys(['.c', '.cpp', '.java', '.py', '.js', '.class', '.h
 
 # Markup
 dir_map.update(dict.fromkeys(
-    ['.md', '.html', '.xml', '.xhtml', '.mhtml'], 'Code' + os.sep + 'Markup'))
+    ['.html', '.xml', '.xhtml', '.mhtml'], 'Code' + os.sep + 'Markup'))
 
 # Database
 dir_map.update(dict.fromkeys(
@@ -75,7 +77,7 @@ if args.path and os.path.exists(args.path):
 def organize(path: str, dry_run: bool = False) -> None:
     files_by_dir = defaultdict(list)
     skipped_files = []
-    
+
     # Group files by destination directory
     for file in os.listdir(path):
         if os.path.isfile(os.path.join(path, file)):
@@ -84,7 +86,7 @@ def organize(path: str, dry_run: bool = False) -> None:
                 files_by_dir[dir_map[ext.lower()]].append(file)
             else:
                 skipped_files.append(file)
-    
+
     # Display organized output
     if dry_run:
         print(f"\n🔍 DRY RUN - Preview for: {os.path.basename(path)}")
@@ -92,7 +94,7 @@ def organize(path: str, dry_run: bool = False) -> None:
     else:
         print(f"\n📂 Organizing: {os.path.basename(path)}")
         print("=" * 50)
-    
+
     total_files = 0
     for dest_dir, files in files_by_dir.items():
         if files:
@@ -104,7 +106,7 @@ def organize(path: str, dry_run: bool = False) -> None:
                     try:
                         if not os.path.exists(os.path.join(path, dest_dir)):
                             os.makedirs(os.path.join(path, dest_dir))
-                        
+
                         os.replace(os.path.join(path, file),
                                  os.path.join(path, dest_dir, file))
                         print(f"   ✅ {file}")
@@ -112,16 +114,16 @@ def organize(path: str, dry_run: bool = False) -> None:
                     except Exception as e:
                         print(f"   ❌ {file} (Error: {str(e)})")
                         skipped_files.append(file)
-            
+
             if dry_run:
                 total_files += len(files)
-    
+
     # Show skipped files
     if skipped_files:
         print(f"\n⚠️  Skipped files ({len(skipped_files)}):")
         for file in sorted(skipped_files):
             print(f"   • {file}")
-    
+
     # Summary
     action = "Would organize" if dry_run else "Organized"
     print(f"\n📊 Summary: {action} {total_files} files")
