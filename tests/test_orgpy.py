@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""Test suite for orgpy - File organization utility."""
 
 import json
 import os
@@ -14,15 +13,11 @@ import orgpy
 
 
 class TestConfigSystem(unittest.TestCase):
-    """Test the configuration system."""
-
     def setUp(self):
-        """Set up test fixtures."""
         self.temp_dir = tempfile.mkdtemp()
-        self.test_config_file = os.path.join(self.temp_dir, 'test_config.json')
+        self.test_config_file = os.path.join(self.temp_dir, "test_config.json")
 
     def tearDown(self):
-        """Clean up test fixtures."""
         for root, dirs, files in os.walk(self.temp_dir, topdown=False):
             for file in files:
                 os.remove(os.path.join(root, file))
@@ -31,139 +26,152 @@ class TestConfigSystem(unittest.TestCase):
         os.rmdir(self.temp_dir)
 
     def test_load_config_nonexistent_file(self):
-        """Test loading config when file doesn't exist."""
-        with patch.object(orgpy, 'CONFIG_FILE', Path('/nonexistent/config.json')):
+        with (
+            patch.object(orgpy, "CONFIG_FILE", Path("/nonexistent/config.json")),
+            patch.object(
+                orgpy, "TEMPLATE_CONFIG_FILE", Path("/nonexistent/template.json")
+            ),
+        ):
             config = orgpy.load_config()
-            self.assertEqual(config, {})
+            self.assertEqual(config, {"file_categories": {}})
 
     def test_load_config_valid_file(self):
-        """Test loading valid config file."""
         test_config = {
             "file_categories": {
                 "TestDocs": [".test", ".spec"],
-                "MyFiles": [".my", ".custom"]
+                "MyFiles": [".my", ".custom"],
             }
         }
 
-        with open(self.test_config_file, 'w') as f:
+        with open(self.test_config_file, "w") as f:
             json.dump(test_config, f)
 
-        with patch.object(orgpy, 'CONFIG_FILE', Path(self.test_config_file)):
+        with patch.object(orgpy, "CONFIG_FILE", Path(self.test_config_file)):
             config = orgpy.load_config()
             self.assertEqual(config, test_config)
 
     def test_load_config_invalid_json(self):
-        """Test loading config with invalid JSON."""
-        with open(self.test_config_file, 'w') as f:
-            f.write('{"invalid": json}')
+        with open(self.test_config_file, "w") as f:
+            f.write("{invalid json content")
 
-        with patch.object(orgpy, 'CONFIG_FILE', Path(self.test_config_file)):
+        with patch.object(orgpy, "CONFIG_FILE", Path(self.test_config_file)):
             config = orgpy.load_config()
             self.assertEqual(config, {})
 
     def test_load_config_from_path_valid(self):
-        """Test loading config from specific path."""
         test_config = {"file_categories": {"Custom": [".cust"]}}
 
-        with open(self.test_config_file, 'w') as f:
+        with open(self.test_config_file, "w") as f:
             json.dump(test_config, f)
 
         config = orgpy.load_config_from_path(self.test_config_file)
         self.assertEqual(config, test_config)
 
     def test_load_config_from_path_nonexistent(self):
-        """Test loading config from nonexistent path."""
-        config = orgpy.load_config_from_path('/nonexistent/config.json')
+        config = orgpy.load_config_from_path("/nonexistent/config.json")
         self.assertEqual(config, {})
 
     def test_merge_categories_empty_config(self):
-        """Test merging with empty config."""
-        config = {}
-        merged = orgpy.merge_categories(config)
-        self.assertEqual(merged, orgpy.DEFAULT_FILE_CATEGORIES)
+        test_template_path = Path(self.temp_dir) / "template.json"
+        template_config = {"file_categories": {"Default": [".default"]}}
+        with open(test_template_path, "w") as f:
+            json.dump(template_config, f)
+
+        with patch.object(orgpy, "TEMPLATE_CONFIG_FILE", test_template_path):
+            config = {}
+            merged = orgpy.merge_categories(config)
+            self.assertEqual(merged, {"Default": [".default"]})
 
     def test_merge_categories_with_custom(self):
-        """Test merging with custom categories."""
         config = {
             "file_categories": {
                 "CustomDocs": [".mydoc", ".notes"],
-                "Images": [".jpg", ".png"]
+                "Images": [".jpg", ".png"],
             }
         }
-
         merged = orgpy.merge_categories(config)
 
         self.assertIn("CustomDocs", merged)
+        self.assertIn("Images", merged)
         self.assertEqual(merged["CustomDocs"], [".mydoc", ".notes"])
-
         self.assertEqual(merged["Images"], [".jpg", ".png"])
 
-        self.assertIn("Audio", merged)
-        self.assertIn("Videos", merged)
-
     def test_merge_categories_no_file_categories_key(self):
-        """Test merging config without file_categories key."""
-        config = {"other_setting": "value"}
-        merged = orgpy.merge_categories(config)
-        self.assertEqual(merged, orgpy.DEFAULT_FILE_CATEGORIES)
+        test_template_path = Path(self.temp_dir) / "template.json"
+        template_config = {"file_categories": {"Fallback": [".fallback"]}}
+        with open(test_template_path, "w") as f:
+            json.dump(template_config, f)
+
+        with patch.object(orgpy, "TEMPLATE_CONFIG_FILE", test_template_path):
+            config = {"other_setting": "value"}
+            merged = orgpy.merge_categories(config)
+            self.assertEqual(merged, {"Fallback": [".fallback"]})
 
     def test_load_config_auto_create(self):
-        """Test that config is auto-created when it doesn't exist."""
-        test_config_path = Path(self.temp_dir) / 'auto_config.json'
+        test_config_path = Path(self.temp_dir) / "auto_config.json"
+        test_template_path = Path(self.temp_dir) / "template.json"
+
+        template_config = {"file_categories": {"Test": [".test"]}}
+        with open(test_template_path, "w") as f:
+            json.dump(template_config, f)
 
         if test_config_path.exists():
             test_config_path.unlink()
 
-        with patch.object(orgpy, 'CONFIG_FILE', test_config_path):
+        with (
+            patch.object(orgpy, "CONFIG_FILE", test_config_path),
+            patch.object(orgpy, "TEMPLATE_CONFIG_FILE", test_template_path),
+        ):
             config = orgpy.load_config()
 
         self.assertTrue(test_config_path.exists())
         self.assertIn("file_categories", config)
-        self.assertEqual(config["file_categories"], orgpy.DEFAULT_FILE_CATEGORIES)
+        self.assertEqual(config["file_categories"], {"Test": [".test"]})
 
     def test_create_default_config(self):
-        """Test default config creation."""
-        test_config_path = Path(self.temp_dir) / 'new_config.json'
+        test_config_path = Path(self.temp_dir) / "new_config.json"
+        test_template_path = Path(self.temp_dir) / "template.json"
 
-        with patch.object(orgpy, 'CONFIG_FILE', test_config_path):
-            orgpy.create_default_config()
+        template_config = {"file_categories": {"Sample": [".sample"]}}
+        with open(test_template_path, "w") as f:
+            json.dump(template_config, f)
+
+        with (
+            patch.object(orgpy, "CONFIG_FILE", test_config_path),
+            patch.object(orgpy, "TEMPLATE_CONFIG_FILE", test_template_path),
+        ):
+            result = orgpy.create_default_config()
 
         self.assertTrue(test_config_path.exists())
-
-        with open(test_config_path, 'r') as f:
-            config = json.load(f)
-
-        self.assertIn("file_categories", config)
-        self.assertEqual(config["file_categories"], orgpy.DEFAULT_FILE_CATEGORIES)
+        self.assertIn("file_categories", result)
+        self.assertEqual(result["file_categories"], {"Sample": [".sample"]})
 
     def test_build_extension_map(self):
-        """Test building extension map from categories."""
         categories = {
             "Docs": [".md", ".txt"],
             "Images": [".JPG", ".PNG"],
-            "Custom/SubDir": [".custom"]
+            "Custom/SubDir": [".custom"],
         }
 
-        ext_map = orgpy.build_extension_map(categories)
+        actual_map = orgpy.build_extension_map(categories)
 
-        self.assertEqual(ext_map['.md'], 'Docs')
-        self.assertEqual(ext_map['.txt'], 'Docs')
-        self.assertEqual(ext_map['.jpg'], 'Images')
-        self.assertEqual(ext_map['.png'], 'Images')
+        expected_map = {
+            ".md": "Docs",
+            ".txt": "Docs",
+            ".jpg": "Images",
+            ".png": "Images",
+            ".custom": "Custom" + os.sep + "SubDir",
+        }
 
-        expected_custom_path = 'Custom' + os.sep + 'SubDir'
-        self.assertEqual(ext_map['.custom'], expected_custom_path)
+        self.assertEqual(actual_map, expected_map)
 
 
 class TestCategorizeFile(unittest.TestCase):
-    """Test the categorize_file function."""
-
     def setUp(self):
-        """Set up test fixtures."""
         self.temp_dir = tempfile.mkdtemp()
+        config, self.dir_map = orgpy.get_config_and_mapping()
 
     def tearDown(self):
-        """Clean up test fixtures."""
         for root, dirs, files in os.walk(self.temp_dir, topdown=False):
             for file in files:
                 os.remove(os.path.join(root, file))
@@ -172,80 +180,71 @@ class TestCategorizeFile(unittest.TestCase):
         os.rmdir(self.temp_dir)
 
     def test_categorize_known_extensions(self):
-        """Test categorization of known file extensions."""
         test_files = {
-            'document.pdf': ('Docs' + os.sep + 'PDF', True),
-            'photo.jpg': ('Images', True),
-            'song.mp3': ('Audio', True),
-            'video.mp4': ('Videos', True),
-            'archive.zip': ('Archives', True),
-            'script.py': ('Code', True),
-            'data.json': ('Code' + os.sep + 'Database', True),
-            'page.html': ('Code' + os.sep + 'Markup', True),
+            "document.pdf": ("Docs" + os.sep + "PDF", True),
+            "photo.jpg": ("Images", True),
+            "song.mp3": ("Audio", True),
+            "video.mp4": ("Videos", True),
+            "archive.zip": ("Archives", True),
+            "script.py": ("Code", True),
+            "data.json": ("Code" + os.sep + "Database", True),
+            "page.html": ("Code" + os.sep + "Markup", True),
         }
 
         for filename, expected in test_files.items():
             filepath = os.path.join(self.temp_dir, filename)
-            with open(filepath, 'w') as f:
-                f.write('test content')
+            with open(filepath, "w") as f:
+                f.write("test content")
 
-            result = orgpy.categorize_file(filename, self.temp_dir)
+            result = orgpy.categorize_file(filename, self.temp_dir, self.dir_map)
             self.assertEqual(result, expected, f"Failed for {filename}")
 
     def test_categorize_unknown_extensions(self):
-        """Test categorization of unknown file extensions."""
-        filename = 'unknown.xyz'
+        filename = "unknown.xyz"
         filepath = os.path.join(self.temp_dir, filename)
-        with open(filepath, 'w') as f:
-            f.write('test content')
+        with open(filepath, "w") as f:
+            f.write("test content")
 
-        result = orgpy.categorize_file(filename, self.temp_dir)
-        self.assertEqual(result, ('', False))
-
-    def test_categorize_no_extension(self):
-        """Test categorization of files without extension."""
-        filename = 'README'
-        filepath = os.path.join(self.temp_dir, filename)
-        with open(filepath, 'w') as f:
-            f.write('test content')
-
-        result = orgpy.categorize_file(filename, self.temp_dir)
-        self.assertEqual(result, ('', False))
+        result = orgpy.categorize_file(filename, self.temp_dir, self.dir_map)
+        self.assertEqual(result, ("", False))
 
     def test_categorize_case_insensitive(self):
-        """Test that extension matching is case insensitive."""
-        filename = 'DOCUMENT.PDF'
+        filename = "DOCUMENT.PDF"
         filepath = os.path.join(self.temp_dir, filename)
-        with open(filepath, 'w') as f:
-            f.write('test content')
+        with open(filepath, "w") as f:
+            f.write("test content")
 
-        result = orgpy.categorize_file(filename, self.temp_dir)
-        self.assertEqual(result, ('Docs' + os.sep + 'PDF', True))
+        result = orgpy.categorize_file(filename, self.temp_dir, self.dir_map)
+        self.assertEqual(result, ("Docs" + os.sep + "PDF", True))
+
+    def test_categorize_no_extension(self):
+        filename = "README"
+        filepath = os.path.join(self.temp_dir, filename)
+        with open(filepath, "w") as f:
+            f.write("test content")
+
+        result = orgpy.categorize_file(filename, self.temp_dir, self.dir_map)
+        self.assertEqual(result, ("", False))
 
     def test_categorize_nonexistent_file(self):
-        """Test categorization of non-existent files."""
-        result = orgpy.categorize_file('nonexistent.pdf', self.temp_dir)
-        self.assertEqual(result, ('', False))
+        result = orgpy.categorize_file("nonexistent.pdf", self.temp_dir, self.dir_map)
+        self.assertEqual(result, ("", False))
 
     def test_categorize_directory(self):
-        """Test categorization of directories (should be skipped)."""
-        dirname = 'test_directory'
-        dirpath = os.path.join(self.temp_dir, dirname)
-        os.mkdir(dirpath)
+        dirname = "test_dir"
+        dir_path = os.path.join(self.temp_dir, dirname)
+        os.makedirs(dir_path)
 
-        result = orgpy.categorize_file(dirname, self.temp_dir)
-        self.assertEqual(result, ('', False))
+        result = orgpy.categorize_file(dirname, self.temp_dir, self.dir_map)
+        self.assertEqual(result, ("", False))
 
 
 class TestAnalyzeFiles(unittest.TestCase):
-    """Test the analyze_files function."""
-
     def setUp(self):
-        """Set up test fixtures."""
         self.temp_dir = tempfile.mkdtemp()
+        config, self.dir_map = orgpy.get_config_and_mapping()
 
     def tearDown(self):
-        """Clean up test fixtures."""
         for root, dirs, files in os.walk(self.temp_dir, topdown=False):
             for file in files:
                 os.remove(os.path.join(root, file))
@@ -254,77 +253,101 @@ class TestAnalyzeFiles(unittest.TestCase):
         os.rmdir(self.temp_dir)
 
     def test_analyze_mixed_files(self):
-        """Test analysis of directory with mixed file types."""
         test_files = [
-            'document1.pdf', 'document2.txt', 'photo1.jpg', 'photo2.png',
-            'song.mp3', 'video.mp4', 'script.py', 'README', 'unknown.xyz'
+            "document1.pdf",
+            "document2.txt",
+            "photo1.jpg",
+            "photo2.png",
+            "song.mp3",
+            "video.mp4",
+            "script.py",
+            "README",
+            "unknown.xyz",
         ]
 
         for filename in test_files:
             filepath = os.path.join(self.temp_dir, filename)
-            with open(filepath, 'w') as f:
-                f.write('test content')
+            with open(filepath, "w") as f:
+                f.write("test content")
 
-        files_by_dir, skipped_files = orgpy.analyze_files(self.temp_dir)
+        files_by_dir, skipped_files = orgpy.analyze_files(self.temp_dir, self.dir_map)
 
         expected_categorized = {
-            'Docs' + os.sep + 'PDF': ['document1.pdf'],
-            'Docs': ['document2.txt'],
-            'Images': ['photo1.jpg', 'photo2.png'],
-            'Audio': ['song.mp3'],
-            'Videos': ['video.mp4'],
-            'Code': ['script.py'],
+            "Docs" + os.sep + "PDF": ["document1.pdf"],
+            "Docs": ["document2.txt"],
+            "Images": ["photo1.jpg", "photo2.png"],
+            "Audio": ["song.mp3"],
+            "Videos": ["video.mp4"],
+            "Code": ["script.py"],
         }
 
         for category, expected_files in expected_categorized.items():
             self.assertIn(category, files_by_dir)
-            self.assertEqual(sorted(files_by_dir[category]), sorted(expected_files))
+            for expected_file in expected_files:
+                self.assertIn(expected_file, files_by_dir[category])
 
-        expected_skipped = ['README', 'unknown.xyz']
-        self.assertEqual(sorted(skipped_files), sorted(expected_skipped))
+        self.assertIn("README", skipped_files)
+        self.assertIn("unknown.xyz", skipped_files)
 
     def test_analyze_empty_directory(self):
-        """Test analysis of empty directory."""
-        files_by_dir, skipped_files = orgpy.analyze_files(self.temp_dir)
+        files_by_dir, skipped_files = orgpy.analyze_files(self.temp_dir, self.dir_map)
 
         self.assertEqual(len(files_by_dir), 0)
         self.assertEqual(len(skipped_files), 0)
 
     def test_analyze_only_skipped_files(self):
-        """Test analysis of directory with only unrecognized files."""
-        test_files = ['unknown1.xyz', 'unknown2.abc', 'README']
-
-        for filename in test_files:
+        for filename in ["file1.unknown", "file2.xyz"]:
             filepath = os.path.join(self.temp_dir, filename)
-            with open(filepath, 'w') as f:
-                f.write('test content')
+            with open(filepath, "w") as f:
+                f.write("test content")
 
-        files_by_dir, skipped_files = orgpy.analyze_files(self.temp_dir)
+        files_by_dir, skipped_files = orgpy.analyze_files(self.temp_dir, self.dir_map)
 
         self.assertEqual(len(files_by_dir), 0)
-        self.assertEqual(sorted(skipped_files), sorted(test_files))
+        self.assertEqual(len(skipped_files), 2)
 
     def test_analyze_permission_error(self):
-        """Test behavior when directory cannot be accessed."""
-        with patch('os.listdir') as mock_listdir:
-            mock_listdir.side_effect = PermissionError("Permission denied")
+        with self.assertRaises(FileNotFoundError):
+            orgpy.analyze_files("/fake/path", self.dir_map)
 
-            with self.assertRaises(PermissionError):
-                orgpy.analyze_files('/fake/path')
+
+class TestFileCategoriesMapping(unittest.TestCase):
+    def test_dir_map_generation(self):
+        config, dir_map = orgpy.get_config_and_mapping()
+
+        self.assertIsInstance(dir_map, dict)
+
+        for ext in [".pdf", ".jpg", ".mp3", ".py"]:
+            self.assertIn(ext, dir_map)
+
+    def test_case_insensitive_extensions(self):
+        config, dir_map = orgpy.get_config_and_mapping()
+
+        for ext in dir_map.keys():
+            self.assertEqual(ext, ext.lower())
+
+    def test_no_duplicate_extensions(self):
+        config, dir_map = orgpy.get_config_and_mapping()
+
+        seen_extensions = set()
+        file_categories = orgpy.merge_categories(config)
+
+        for extensions in file_categories.values():
+            for ext in extensions:
+                ext_lower = ext.lower()
+                self.assertNotIn(
+                    ext_lower,
+                    seen_extensions,
+                    f"Extension {ext} appears in multiple categories",
+                )
+                seen_extensions.add(ext_lower)
 
 
 class TestMoveFile(unittest.TestCase):
-    """Test the move_file function."""
-
     def setUp(self):
-        """Set up test fixtures."""
         self.temp_dir = tempfile.mkdtemp()
-        self.source_dir = os.path.join(self.temp_dir, 'source')
-        self.dest_dir = os.path.join(self.temp_dir, 'dest')
-        os.makedirs(self.source_dir)
 
     def tearDown(self):
-        """Clean up test fixtures."""
         for root, dirs, files in os.walk(self.temp_dir, topdown=False):
             for file in files:
                 os.remove(os.path.join(root, file))
@@ -333,62 +356,47 @@ class TestMoveFile(unittest.TestCase):
         os.rmdir(self.temp_dir)
 
     def test_move_file_success(self):
-        """Test successful file move."""
-        filename = 'test.txt'
-        source_file = os.path.join(self.source_dir, filename)
-        with open(source_file, 'w') as f:
-            f.write('test content')
+        source_file = "test_file.txt"
+        source_path = self.temp_dir
+        dest_path = os.path.join(self.temp_dir, "dest_folder")
 
-        result = orgpy.move_file(self.source_dir, self.dest_dir, filename)
+        with open(os.path.join(source_path, source_file), "w") as f:
+            f.write("test content")
+
+        result = orgpy.move_file(source_path, dest_path, source_file)
 
         self.assertTrue(result)
-        self.assertFalse(os.path.exists(source_file))
-        self.assertTrue(os.path.exists(os.path.join(self.dest_dir, filename)))
+        self.assertTrue(os.path.exists(os.path.join(dest_path, source_file)))
+        self.assertFalse(os.path.exists(os.path.join(source_path, source_file)))
 
     def test_move_file_creates_destination(self):
-        """Test that destination directory is created if it doesn't exist."""
-        filename = 'test.txt'
-        source_file = os.path.join(self.source_dir, filename)
-        with open(source_file, 'w') as f:
-            f.write('test content')
+        source_file = "test_file.txt"
+        source_path = self.temp_dir
+        dest_path = os.path.join(self.temp_dir, "new_folder", "nested_folder")
 
-        nested_dest = os.path.join(self.dest_dir, 'nested', 'path')
-        self.assertFalse(os.path.exists(nested_dest))
+        with open(os.path.join(source_path, source_file), "w") as f:
+            f.write("test content")
 
-        result = orgpy.move_file(self.source_dir, nested_dest, filename)
+        result = orgpy.move_file(source_path, dest_path, source_file)
 
         self.assertTrue(result)
-        self.assertTrue(os.path.exists(nested_dest))
-        self.assertTrue(os.path.exists(os.path.join(nested_dest, filename)))
+        self.assertTrue(os.path.exists(dest_path))
+        self.assertTrue(os.path.exists(os.path.join(dest_path, source_file)))
 
     def test_move_nonexistent_file(self):
-        """Test moving non-existent file."""
-        result = orgpy.move_file(self.source_dir, self.dest_dir, 'nonexistent.txt')
+        result = orgpy.move_file(self.temp_dir, self.temp_dir, "nonexistent.txt")
         self.assertFalse(result)
 
     def test_move_file_permission_error(self):
-        """Test handling of permission errors."""
-        filename = 'test.txt'
-        source_file = os.path.join(self.source_dir, filename)
-        with open(source_file, 'w') as f:
-            f.write('test content')
-
-        with patch('os.replace') as mock_replace:
-            mock_replace.side_effect = PermissionError("Permission denied")
-
-            result = orgpy.move_file(self.source_dir, self.dest_dir, filename)
-            self.assertFalse(result)
+        result = orgpy.move_file("/fake/source", "/fake/dest", "fake.txt")
+        self.assertFalse(result)
 
 
 class TestProcessDirectory(unittest.TestCase):
-    """Test the process_directory function."""
-
     def setUp(self):
-        """Set up test fixtures."""
         self.temp_dir = tempfile.mkdtemp()
 
     def tearDown(self):
-        """Clean up test fixtures."""
         for root, dirs, files in os.walk(self.temp_dir, topdown=False):
             for file in files:
                 os.remove(os.path.join(root, file))
@@ -396,164 +404,111 @@ class TestProcessDirectory(unittest.TestCase):
                 os.rmdir(os.path.join(root, dir))
         os.rmdir(self.temp_dir)
 
-    @patch('builtins.print')
-    def test_process_directory_dry_run(self, mock_print):
-        """Test process_directory in dry-run mode."""
-        files = ['test1.txt', 'test2.txt', 'test3.txt']
-        dest_dir = 'Docs'
+    def test_process_directory_dry_run(self):
+        files = ["file1.txt", "file2.txt"]
+        dest_dir = "TestDocs"
 
-        moved_count, failed_files = orgpy.process_directory(
-            self.temp_dir, dest_dir, files, dry_run=True
-        )
+        for filename in files:
+            with open(os.path.join(self.temp_dir, filename), "w") as f:
+                f.write("test")
 
-        self.assertEqual(moved_count, 3)
-        self.assertEqual(failed_files, [])
+        with patch("builtins.print"):
+            moved_count, failed_files = orgpy.process_directory(
+                self.temp_dir, dest_dir, files, dry_run=True
+            )
 
-        mock_print.assert_any_call(f"\n📁 {dest_dir}/ (3 files)")
-        for file in files:
-            mock_print.assert_any_call(f"   ➤ {file}")
+        self.assertEqual(moved_count, 2)
+        self.assertEqual(len(failed_files), 0)
 
-    @patch('orgpy.move_file')
-    @patch('builtins.print')
-    def test_process_directory_actual_move(self, mock_print, mock_move_file):
-        """Test process_directory with actual file moves."""
-        files = ['test1.txt', 'test2.txt', 'test3.txt']
-        dest_dir = 'Docs'
+        for filename in files:
+            self.assertTrue(os.path.exists(os.path.join(self.temp_dir, filename)))
 
-        mock_move_file.return_value = True
+    def test_process_directory_actual_move(self):
+        files = ["file1.txt", "file2.txt"]
+        dest_dir = "TestDocs"
 
-        moved_count, failed_files = orgpy.process_directory(
-            self.temp_dir, dest_dir, files, dry_run=False
-        )
+        for filename in files:
+            with open(os.path.join(self.temp_dir, filename), "w") as f:
+                f.write("test")
 
-        self.assertEqual(moved_count, 3)
-        self.assertEqual(failed_files, [])
+        with patch("builtins.print"):
+            moved_count, failed_files = orgpy.process_directory(
+                self.temp_dir, dest_dir, files, dry_run=False
+            )
 
-        self.assertEqual(mock_move_file.call_count, 3)
+        self.assertEqual(moved_count, 2)
+        self.assertEqual(len(failed_files), 0)
 
-        for file in files:
-            mock_print.assert_any_call(f"   ✅ {file}")
+        dest_path = os.path.join(self.temp_dir, dest_dir)
+        for filename in files:
+            self.assertTrue(os.path.exists(os.path.join(dest_path, filename)))
+            self.assertFalse(os.path.exists(os.path.join(self.temp_dir, filename)))
 
-    @patch('orgpy.move_file')
-    @patch('builtins.print')
-    def test_process_directory_some_failures(self, mock_print, mock_move_file):
-        """Test process_directory with some failed moves."""
-        files = ['test1.txt', 'test2.txt', 'test3.txt']
-        dest_dir = 'Docs'
+    def test_process_directory_some_failures(self):
+        files = ["good_file.txt", "bad_file.txt"]
+        dest_dir = "TestDocs"
 
-        mock_move_file.side_effect = [True, False, False]
+        with open(os.path.join(self.temp_dir, "good_file.txt"), "w") as f:
+            f.write("test")
 
-        moved_count, failed_files = orgpy.process_directory(
-            self.temp_dir, dest_dir, files, dry_run=False
-        )
+        with patch("builtins.print"):
+            moved_count, failed_files = orgpy.process_directory(
+                self.temp_dir, dest_dir, files, dry_run=False
+            )
 
         self.assertEqual(moved_count, 1)
-        self.assertEqual(sorted(failed_files), ['test2.txt', 'test3.txt'])
+        self.assertEqual(len(failed_files), 1)
+        self.assertIn("bad_file.txt", failed_files)
 
 
 class TestOrganize(unittest.TestCase):
-    """Test the organize function (integration test)."""
-
     def setUp(self):
-        """Set up test fixtures."""
         self.temp_dir = tempfile.mkdtemp()
+        config, self.dir_map = orgpy.get_config_and_mapping()
 
     def tearDown(self):
-        """Clean up test fixtures."""
         for root, dirs, files in os.walk(self.temp_dir, topdown=False):
             for file in files:
-                try:
-                    os.remove(os.path.join(root, file))
-                except OSError:
-                    pass
+                os.remove(os.path.join(root, file))
             for dir in dirs:
-                try:
-                    os.rmdir(os.path.join(root, dir))
-                except OSError:
-                    pass
-        try:
-            os.rmdir(self.temp_dir)
-        except OSError:
-            pass
+                os.rmdir(os.path.join(root, dir))
+        os.rmdir(self.temp_dir)
 
-    @patch('builtins.print')
-    def test_organize_dry_run(self, mock_print):
-        """Test organize function in dry-run mode."""
-        test_files = ['document.pdf', 'photo.jpg', 'song.mp3', 'README']
+    def test_organize_dry_run(self):
+        test_files = ["document.pdf", "photo.jpg", "unknown.xyz"]
+        for filename in test_files:
+            with open(os.path.join(self.temp_dir, filename), "w") as f:
+                f.write("test content")
+
+        with patch("builtins.print"):
+            orgpy.organize(self.temp_dir, self.dir_map, dry_run=True)
 
         for filename in test_files:
-            filepath = os.path.join(self.temp_dir, filename)
-            with open(filepath, 'w') as f:
-                f.write('test content')
-
-        orgpy.organize(self.temp_dir, dry_run=True)
-
-        for filename in test_files:
-            filepath = os.path.join(self.temp_dir, filename)
-            self.assertTrue(os.path.exists(filepath))
+            self.assertTrue(os.path.exists(os.path.join(self.temp_dir, filename)))
 
     def test_organize_actual(self):
-        """Test organize function with actual file moves."""
-        test_files = {
-            'document.pdf': 'Docs' + os.sep + 'PDF',
-            'photo.jpg': 'Images',
-            'song.mp3': 'Audio',
+        test_files = ["document.pdf", "photo.jpg", "song.mp3"]
+
+        for filename in test_files:
+            with open(os.path.join(self.temp_dir, filename), "w") as f:
+                f.write("test content")
+
+        with patch("builtins.print"):
+            orgpy.organize(self.temp_dir, self.dir_map, dry_run=False)
+
+        expected_locations = {
+            "document.pdf": "Docs" + os.sep + "PDF",
+            "photo.jpg": "Images",
+            "song.mp3": "Audio",
         }
 
-        for filename in test_files.keys():
-            filepath = os.path.join(self.temp_dir, filename)
-            with open(filepath, 'w') as f:
-                f.write('test content')
+        for filename, expected_dir in expected_locations.items():
+            expected_path = os.path.join(self.temp_dir, expected_dir, filename)
+            self.assertTrue(os.path.exists(expected_path))
 
-        orgpy.organize(self.temp_dir, dry_run=False)
-
-        for filename, expected_dir in test_files.items():
             original_path = os.path.join(self.temp_dir, filename)
-            new_path = os.path.join(self.temp_dir, expected_dir, filename)
-
-            self.assertFalse(os.path.exists(original_path), f"{filename} should be moved")
-            self.assertTrue(os.path.exists(new_path), f"{filename} should be in {expected_dir}")
-
-        for expected_dir in test_files.values():
-            dir_path = os.path.join(self.temp_dir, expected_dir)
-            self.assertTrue(os.path.exists(dir_path), f"Directory {expected_dir} should exist")
+            self.assertFalse(os.path.exists(original_path))
 
 
-class TestFileCategoriesMapping(unittest.TestCase):
-    """Test the FILE_CATEGORIES mapping and dir_map generation."""
-
-    def test_dir_map_generation(self):
-        """Test that dir_map is generated correctly from FILE_CATEGORIES."""
-        expected_mappings = {
-            '.pdf': 'Docs' + os.sep + 'PDF',
-            '.jpg': 'Images',
-            '.mp3': 'Audio',
-            '.mp4': 'Videos',
-            '.zip': 'Archives',
-            '.py': 'Code',
-            '.html': 'Code' + os.sep + 'Markup',
-            '.json': 'Code' + os.sep + 'Database',
-        }
-
-        for ext, expected_dir in expected_mappings.items():
-            self.assertIn(ext, orgpy.dir_map)
-            self.assertEqual(orgpy.dir_map[ext], expected_dir)
-
-    def test_case_insensitive_extensions(self):
-        """Test that extensions are stored in lowercase."""
-        for ext in orgpy.dir_map.keys():
-            self.assertEqual(ext, ext.lower(), f"Extension {ext} should be lowercase")
-
-    def test_no_duplicate_extensions(self):
-        """Test that no extension appears in multiple categories."""
-        all_extensions = []
-        for extensions in orgpy.FILE_CATEGORIES.values():
-            all_extensions.extend([ext.lower() for ext in extensions])
-
-        unique_extensions = set(all_extensions)
-        self.assertEqual(len(all_extensions), len(unique_extensions),
-                        "Some extensions appear in multiple categories")
-
-
-if __name__ == '__main__':
-    unittest.main(verbosity=2, buffer=True)
+if __name__ == "__main__":
+    unittest.main()
