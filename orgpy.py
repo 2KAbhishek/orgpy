@@ -2,56 +2,37 @@
 import argparse
 import json
 import os
+import shutil
 from collections import defaultdict
 from pathlib import Path
 
 DEFAULT_SEPARATOR_LENGTH = 40
-CONFIRMATION_RESPONSES = {'y', 'Y', 'yes', 'Yes'}
-CONFIG_FILE = Path.home() / '.config' / 'orgpy.json'
+CONFIRMATION_RESPONSES = {"y", "Y", "yes", "Yes"}
+CONFIG_FILE = Path.home() / ".config" / "orgpy.json"
+TEMPLATE_CONFIG_FILE = Path(__file__).resolve().parent / "orgpy.json"
 
-DEFAULT_FILE_CATEGORIES = {
-    'Docs': ['.md', '.txt'],
-    'Docs/PDF': ['.pdf'],
-    'Docs/Word': ['.doc', '.docx', '.odt', '.rtf'],
-    'Docs/Sheets': ['.ods', '.xls', '.xlsm', '.xlsx'],
-    'Docs/Presentations': ['.key', '.odp', '.pps', '.ppt', '.pptx'],
 
-    'Images': ['.ai', '.bmp', '.gif', '.ico', '.jpeg', '.jpg', '.png',
-               '.ps', '.psd', '.svg', '.tif', '.tiff', '.webp'],
-
-    'Audio': ['.aif', '.cda', '.mid', '.mp3', '.mpa', '.ogg',
-              '.wav', '.wma', '.wpl'],
-
-    'Videos': ['.3g2', '.3gp', '.avi', '.flv', '.h264', '.m4v', '.mkv',
-               '.mov', '.mp4', '.mpg', '.rm', '.swf', '.vob', '.wmv'],
-
-    'Archives': ['.7z', '.arj', '.bz2', '.gz', '.lz4', '.rar',
-                 '.tar', '.xz', '.z', '.zip', '.zstd'],
-
-    'Programs': ['.apk', '.bin', '.deb', '.exe', '.jar', '.msi', '.rpm'],
-
-    'Code': ['.c', '.cpp', '.java', '.py', '.js', '.class', '.h', '.sh',
-             '.bat', '.css', '.go', '.rs', '.cs', '.swift', '.r', '.php',
-             '.dart', '.kt', '.mat', '.pl', '.rb', '.scala'],
-
-    'Code/Markup': ['.html', '.xml', '.xhtml', '.mhtml'],
-    'Code/Database': ['.sql', '.db', '.json', '.csv'],
-}
+def load_template_config() -> dict:
+    """Load the template configuration file."""
+    try:
+        if TEMPLATE_CONFIG_FILE.exists():
+            with open(TEMPLATE_CONFIG_FILE, "r") as f:
+                return json.load(f)
+    except (json.JSONDecodeError, OSError):
+        pass
+    return {"file_categories": {}}
 
 
 def load_config() -> dict:
     """Load configuration from config file, create default if not found."""
     try:
         if CONFIG_FILE.exists():
-            with open(CONFIG_FILE, 'r') as f:
+            with open(CONFIG_FILE, "r") as f:
                 return json.load(f)
         else:
-            create_default_config()
-            with open(CONFIG_FILE, 'r') as f:
-                return json.load(f)
+            return create_default_config()
     except (json.JSONDecodeError, OSError):
-        pass
-    return {}
+        return {}
 
 
 def load_config_from_path(config_path: str) -> dict:
@@ -59,7 +40,7 @@ def load_config_from_path(config_path: str) -> dict:
     try:
         config_file = Path(config_path)
         if config_file.exists():
-            with open(config_file, 'r') as f:
+            with open(config_file, "r") as f:
                 return json.load(f)
         else:
             print(f"❌ Config file not found: {config_file}")
@@ -68,30 +49,30 @@ def load_config_from_path(config_path: str) -> dict:
     return {}
 
 
-def create_default_config() -> None:
-    """Create a default configuration file."""
-    default_config = {
-        "file_categories": DEFAULT_FILE_CATEGORIES
-    }
-
-    CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+def create_default_config() -> dict:
+    """Create default config by copying template file."""
+    template_config = load_template_config()
 
     try:
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump(default_config, f, indent=2)
+        CONFIG_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+        if TEMPLATE_CONFIG_FILE.exists():
+            shutil.copy2(TEMPLATE_CONFIG_FILE, CONFIG_FILE)
+        else:
+            with open(CONFIG_FILE, "w") as f:
+                json.dump(template_config, f, indent=2)
     except OSError:
         pass
 
+    return template_config
+
 
 def merge_categories(config: dict) -> dict:
-    """Merge user config with default categories."""
-    merged = DEFAULT_FILE_CATEGORIES.copy()
+    """Return categories from config, or load from template if empty."""
+    if "file_categories" in config and config["file_categories"]:
+        return config["file_categories"]
 
-    if 'file_categories' in config:
-        for category, extensions in config['file_categories'].items():
-            merged[category] = extensions
-
-    return merged
+    return load_template_config().get("file_categories", {})
 
 
 def build_extension_map(file_categories: dict) -> dict:
@@ -99,33 +80,40 @@ def build_extension_map(file_categories: dict) -> dict:
     dir_map = {}
     for directory, extensions in file_categories.items():
         for ext in extensions:
-            dir_map[ext.lower()] = directory.replace('/', os.sep)
+            dir_map[ext.lower()] = directory.replace("/", os.sep)
     return dir_map
 
 
-config = load_config()
-FILE_CATEGORIES = merge_categories(config)
-dir_map = build_extension_map(FILE_CATEGORIES)
+def get_config_and_mapping(custom_config_path: str = None) -> tuple[dict, dict]:
+    """Load config and build extension mapping."""
+    if custom_config_path:
+        config = load_config_from_path(custom_config_path)
+    else:
+        config = load_config()
+
+    file_categories = merge_categories(config)
+    dir_map = build_extension_map(file_categories)
+    return config, dir_map
 
 
-def categorize_file(file: str, path: str) -> tuple[str, bool]:
+def categorize_file(file: str, path: str, dir_map: dict) -> tuple[str, bool]:
     """Categorize a single file and return (destination, is_categorized)."""
     if not os.path.isfile(os.path.join(path, file)):
-        return '', False
+        return "", False
 
     _, ext = os.path.splitext(file)
     if ext.lower() in dir_map:
         return dir_map[ext.lower()], True
-    return '', False
+    return "", False
 
 
-def analyze_files(path: str) -> tuple[dict[str, list[str]], list[str]]:
+def analyze_files(path: str, dir_map: dict) -> tuple[dict[str, list[str]], list[str]]:
     """Analyze files and group them by destination directory."""
     files_by_dir = defaultdict(list)
     skipped_files = []
 
     for file in os.listdir(path):
-        dest_dir, is_categorized = categorize_file(file, path)
+        dest_dir, is_categorized = categorize_file(file, path, dir_map)
         if is_categorized:
             files_by_dir[dest_dir].append(file)
         else:
@@ -149,14 +137,15 @@ def move_file(source_path: str, dest_path: str, file: str) -> bool:
         if not os.path.exists(dest_path):
             os.makedirs(dest_path)
 
-        os.replace(os.path.join(source_path, file),
-                  os.path.join(dest_path, file))
+        os.replace(os.path.join(source_path, file), os.path.join(dest_path, file))
         return True
-    except Exception:
+    except (OSError, PermissionError, FileNotFoundError):
         return False
 
 
-def process_directory(path: str, dest_dir: str, files: list[str], dry_run: bool) -> tuple[int, list[str]]:
+def process_directory(
+    path: str, dest_dir: str, files: list[str], dry_run: bool
+) -> tuple[int, list[str]]:
     """Process files for a single destination directory."""
     print(f"\n📁 {dest_dir}/ ({len(files)} files)")
 
@@ -194,45 +183,65 @@ def display_summary(total_files: int, skipped_files: list[str], dry_run: bool) -
     print()
 
 
-def organize(path: str, dry_run: bool = False) -> None:
-    """Main organize function - orchestrates the file organization process."""
-    files_by_dir, skipped_files = analyze_files(path)
+def organize(path: str, dir_map: dict, dry_run: bool = False) -> None:
+    """Orchestrate the file organization process."""
+    files_by_dir, skipped_files = analyze_files(path, dir_map)
     display_header(path, dry_run)
 
     total_files = 0
     for dest_dir, files in files_by_dir.items():
         if files:
-            moved_count, failed_files = process_directory(path, dest_dir, files, dry_run)
+            moved_count, failed_files = process_directory(
+                path, dest_dir, files, dry_run
+            )
             total_files += moved_count
             skipped_files.extend(failed_files)
 
     display_summary(total_files, skipped_files, dry_run)
+
 
 def create_arg_parser() -> argparse.ArgumentParser:
     """Create and return the argument parser."""
     parser = argparse.ArgumentParser(
         prog="orgpy",
         description="Organize your digital mess.",
-        epilog="Visit github.com/2KAbhishek/orgpy for more."
+        epilog="Visit github.com/2KAbhishek/orgpy for more.",
     )
 
-    parser.add_argument("-p", "--path", metavar="path", type=str, default=os.getcwd(),
-                        help="The directory path to organize.")
+    parser.add_argument(
+        "-p",
+        "--path",
+        metavar="path",
+        type=str,
+        default=os.getcwd(),
+        help="The directory path to organize.",
+    )
 
-    parser.add_argument("-c", "--config", metavar="CONFIG_FILE", type=str,
-                        help="Path to custom configuration file.")
+    parser.add_argument(
+        "-c",
+        "--config",
+        metavar="CONFIG_FILE",
+        type=str,
+        help="Path to custom configuration file.",
+    )
 
-    parser.add_argument("--config-path", action="store_true",
-                        help="Show configuration file path and exit.")
+    parser.add_argument(
+        "--config-path",
+        action="store_true",
+        help="Show configuration file path and exit.",
+    )
 
-    parser.add_argument("--dry-run", action="store_true",
-                        help="Preview changes without actually moving files.")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview changes without actually moving files.",
+    )
 
     return parser
 
+
 def main() -> None:
     """Main entry point for the CLI application."""
-
     args = create_arg_parser().parse_args()
 
     if args.config_path:
@@ -243,22 +252,19 @@ def main() -> None:
             print("❌ Config file does not exist, will be created on first run")
         return
 
-    if args.config:
-        global config, FILE_CATEGORIES, dir_map
-        config = load_config_from_path(args.config)
-        FILE_CATEGORIES = merge_categories(config)
-        dir_map = build_extension_map(FILE_CATEGORIES)
-
     if not os.path.exists(args.path):
         print(f"Error: Directory '{args.path}' does not exist.")
         exit(1)
 
-    path = args.path
+    config, dir_map = get_config_and_mapping(args.config)
 
     if args.dry_run:
-        organize(path, dry_run=True)
-    elif input(f"Organize directory '{os.path.basename(path)}'? (y/N): ") in CONFIRMATION_RESPONSES:
-        organize(path)
+        organize(args.path, dir_map, dry_run=True)
+    elif (
+        input(f"Organize directory '{os.path.basename(args.path)}'? (y/N): ")
+        in CONFIRMATION_RESPONSES
+    ):
+        organize(args.path, dir_map)
     else:
         print("Operation cancelled.")
 
