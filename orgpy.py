@@ -3,6 +3,9 @@ import argparse
 import os
 from collections import defaultdict
 
+DEFAULT_SEPARATOR_LENGTH = 50
+CONFIRMATION_RESPONSES = {'y', 'Y', 'yes', 'Yes'}
+
 FILE_CATEGORIES = {
     'Docs': ['.md', '.txt'],
     'Docs/PDF': ['.pdf'],
@@ -37,22 +40,6 @@ for directory, extensions in FILE_CATEGORIES.items():
     for ext in extensions:
         dir_map[ext.lower()] = directory.replace('/', os.sep)
 
-parser = argparse.ArgumentParser(prog="orgpy", description="Organize yor digital mess.",
-                                 epilog="Visit github.com/2KAbhishek/orgpy for more.")
-
-parser.add_argument("-p", "--path", metavar="path", type=str, default=os.getcwd(),
-                    help="The directory path to organize.")
-
-parser.add_argument("--dry-run", action="store_true",
-                    help="Preview changes without actually moving files.")
-
-args = parser.parse_args()
-
-path = os.getcwd()
-
-if args.path and os.path.exists(args.path):
-    path = args.path
-
 
 def categorize_file(file: str, path: str) -> tuple[str, bool]:
     """Categorize a single file and return (destination, is_categorized)."""
@@ -65,7 +52,7 @@ def categorize_file(file: str, path: str) -> tuple[str, bool]:
     return '', False
 
 
-def analyze_files(path: str) -> tuple[dict, list]:
+def analyze_files(path: str) -> tuple[dict[str, list[str]], list[str]]:
     """Analyze files and group them by destination directory."""
     files_by_dir = defaultdict(list)
     skipped_files = []
@@ -86,7 +73,7 @@ def display_header(path: str, dry_run: bool) -> None:
         print(f"\n🔍 DRY RUN - Preview for: {os.path.basename(path)}")
     else:
         print(f"\n📂 Organizing: {os.path.basename(path)}")
-    print("=" * 50)
+    print("=" * DEFAULT_SEPARATOR_LENGTH)
 
 
 def move_file(source_path: str, dest_path: str, file: str) -> bool:
@@ -102,7 +89,7 @@ def move_file(source_path: str, dest_path: str, file: str) -> bool:
         return False
 
 
-def process_directory(path: str, dest_dir: str, files: list, dry_run: bool) -> tuple[int, list]:
+def process_directory(path: str, dest_dir: str, files: list[str], dry_run: bool) -> tuple[int, list[str]]:
     """Process files for a single destination directory."""
     print(f"\n📁 {dest_dir}/ ({len(files)} files)")
 
@@ -126,7 +113,7 @@ def process_directory(path: str, dest_dir: str, files: list, dry_run: bool) -> t
     return moved_count, failed_files
 
 
-def display_summary(total_files: int, skipped_files: list, dry_run: bool) -> None:
+def display_summary(total_files: int, skipped_files: list[str], dry_run: bool) -> None:
     """Display the operation summary."""
     if skipped_files:
         print(f"\n⚠️  Skipped files ({len(skipped_files)}):")
@@ -155,9 +142,35 @@ def organize(path: str, dry_run: bool = False) -> None:
     display_summary(total_files, skipped_files, dry_run)
 
 
-if args.dry_run:
-    organize(path, dry_run=True)
-elif input(f"Organize directory '{os.path.basename(path)}'? (y/N): ") in ['y', 'Y', 'yes', 'Yes']:
-    organize(path)
-else:
-    print("Operation cancelled.")
+def main() -> None:
+    """Main entry point for the CLI application."""
+    parser = argparse.ArgumentParser(
+        prog="orgpy",
+        description="Organize your digital mess.",
+        epilog="Visit github.com/2KAbhishek/orgpy for more."
+    )
+
+    parser.add_argument("-p", "--path", metavar="path", type=str, default=os.getcwd(),
+                        help="The directory path to organize.")
+
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Preview changes without actually moving files.")
+
+    args = parser.parse_args()
+
+    if not os.path.exists(args.path):
+        print(f"Error: Directory '{args.path}' does not exist.")
+        exit(1)
+
+    path = args.path
+
+    if args.dry_run:
+        organize(path, dry_run=True)
+    elif input(f"Organize directory '{os.path.basename(path)}'? (y/N): ") in CONFIRMATION_RESPONSES:
+        organize(path)
+    else:
+        print("Operation cancelled.")
+
+
+if __name__ == "__main__":
+    main()
