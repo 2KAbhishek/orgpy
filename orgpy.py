@@ -54,18 +54,28 @@ if args.path and os.path.exists(args.path):
     path = args.path
 
 
+def categorize_file(file: str, path: str) -> tuple[str, bool]:
+    """Categorize a single file and return (destination, is_categorized)."""
+    if not os.path.isfile(os.path.join(path, file)):
+        return '', False
+
+    _, ext = os.path.splitext(file)
+    if ext.lower() in dir_map:
+        return dir_map[ext.lower()], True
+    return '', False
+
+
 def analyze_files(path: str) -> tuple[dict, list]:
     """Analyze files and group them by destination directory."""
     files_by_dir = defaultdict(list)
     skipped_files = []
 
     for file in os.listdir(path):
-        if os.path.isfile(os.path.join(path, file)):
-            file_name, ext = os.path.splitext(file)
-            if ext.lower() in dir_map:
-                files_by_dir[dir_map[ext.lower()]].append(file)
-            else:
-                skipped_files.append(file)
+        dest_dir, is_categorized = categorize_file(file, path)
+        if is_categorized:
+            files_by_dir[dest_dir].append(file)
+        else:
+            skipped_files.append(file)
 
     return files_by_dir, skipped_files
 
@@ -79,29 +89,39 @@ def display_header(path: str, dry_run: bool) -> None:
     print("=" * 50)
 
 
+def move_file(source_path: str, dest_path: str, file: str) -> bool:
+    """Move a single file, return success status."""
+    try:
+        if not os.path.exists(dest_path):
+            os.makedirs(dest_path)
+
+        os.replace(os.path.join(source_path, file),
+                  os.path.join(dest_path, file))
+        return True
+    except Exception:
+        return False
+
+
 def process_directory(path: str, dest_dir: str, files: list, dry_run: bool) -> tuple[int, list]:
     """Process files for a single destination directory."""
+    print(f"\n📁 {dest_dir}/ ({len(files)} files)")
+
     moved_count = 0
     failed_files = []
-
-    print(f"\n📁 {dest_dir}/ ({len(files)} files)")
 
     for file in sorted(files):
         if dry_run:
             print(f"   ➤ {file}")
             moved_count += 1
-        else:
-            try:
-                if not os.path.exists(os.path.join(path, dest_dir)):
-                    os.makedirs(os.path.join(path, dest_dir))
+            continue
 
-                os.replace(os.path.join(path, file),
-                         os.path.join(path, dest_dir, file))
-                print(f"   ✅ {file}")
-                moved_count += 1
-            except Exception as e:
-                print(f"   ❌ {file} (Error: {str(e)})")
-                failed_files.append(file)
+        dest_path = os.path.join(path, dest_dir)
+        if move_file(path, dest_path, file):
+            print(f"   ✅ {file}")
+            moved_count += 1
+        else:
+            print(f"   ❌ {file}")
+            failed_files.append(file)
 
     return moved_count, failed_files
 
