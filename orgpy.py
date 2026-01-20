@@ -209,12 +209,10 @@ def create_arg_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "-p",
-        "--path",
-        metavar="path",
-        type=str,
+        "path",
+        nargs="?",
         default=os.getcwd(),
-        help="The directory path to organize.",
+        help="The directory path to organize. [Default: current working directory]",
     )
 
     parser.add_argument(

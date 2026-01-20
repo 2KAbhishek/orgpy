@@ -47,23 +47,25 @@ ln -sfnv "$PWD/orgpy.py" ~/Applications/bin/orgpy
 
 ```bash
 USAGE:
-    orgpy [-h] [-p path] [-c CONFIG_FILE] [--config-path] [--dry-run]
+    orgpy [-h] [path] [--dry-run] [-c CONFIG_FILE] [--config-path]
 
 Organize your digital mess.
 
+positional arguments:
+  path                  The directory path to organize. [Default: current working directory]
+
 options:
   -h, --help            show this help message and exit
-  -p, --path path       The directory path to organize.
+  --dry-run             Preview changes without actually moving files.
   -c, --config CONFIG_FILE
                         Path to custom configuration file.
   --config-path         Show configuration file path and exit.
-  --dry-run             Preview changes without actually moving files.
 
 Visit github.com/2KAbhishek/orgpy for more.
 
 EXAMPLE:
-orgpy ~/Downloads # Organizes your downloads directory
-orgpy --dry-run   # Preview what would be organized
+orgpy ~/Downloads     # Organizes your downloads directory
+orgpy ~/Desktop --dry-run  # Preview what would be organized in desktop
 ```
 
 ### Configuration
