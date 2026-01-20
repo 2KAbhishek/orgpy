@@ -54,7 +54,8 @@ if args.path and os.path.exists(args.path):
     path = args.path
 
 
-def organize(path: str, dry_run: bool = False) -> None:
+def analyze_files(path: str) -> tuple[dict, list]:
+    """Analyze files and group them by destination directory."""
     files_by_dir = defaultdict(list)
     skipped_files = []
 
@@ -66,36 +67,47 @@ def organize(path: str, dry_run: bool = False) -> None:
             else:
                 skipped_files.append(file)
 
+    return files_by_dir, skipped_files
+
+
+def display_header(path: str, dry_run: bool) -> None:
+    """Display the operation header."""
     if dry_run:
         print(f"\n🔍 DRY RUN - Preview for: {os.path.basename(path)}")
-        print("=" * 50)
     else:
         print(f"\n📂 Organizing: {os.path.basename(path)}")
-        print("=" * 50)
+    print("=" * 50)
 
-    total_files = 0
-    for dest_dir, files in files_by_dir.items():
-        if files:
-            print(f"\n📁 {dest_dir}/ ({len(files)} files)")
-            for file in sorted(files):
-                if dry_run:
-                    print(f"   ➤ {file}")
-                else:
-                    try:
-                        if not os.path.exists(os.path.join(path, dest_dir)):
-                            os.makedirs(os.path.join(path, dest_dir))
 
-                        os.replace(os.path.join(path, file),
-                                 os.path.join(path, dest_dir, file))
-                        print(f"   ✅ {file}")
-                        total_files += 1
-                    except Exception as e:
-                        print(f"   ❌ {file} (Error: {str(e)})")
-                        skipped_files.append(file)
+def process_directory(path: str, dest_dir: str, files: list, dry_run: bool) -> tuple[int, list]:
+    """Process files for a single destination directory."""
+    moved_count = 0
+    failed_files = []
 
-            if dry_run:
-                total_files += len(files)
+    print(f"\n📁 {dest_dir}/ ({len(files)} files)")
 
+    for file in sorted(files):
+        if dry_run:
+            print(f"   ➤ {file}")
+            moved_count += 1
+        else:
+            try:
+                if not os.path.exists(os.path.join(path, dest_dir)):
+                    os.makedirs(os.path.join(path, dest_dir))
+
+                os.replace(os.path.join(path, file),
+                         os.path.join(path, dest_dir, file))
+                print(f"   ✅ {file}")
+                moved_count += 1
+            except Exception as e:
+                print(f"   ❌ {file} (Error: {str(e)})")
+                failed_files.append(file)
+
+    return moved_count, failed_files
+
+
+def display_summary(total_files: int, skipped_files: list, dry_run: bool) -> None:
+    """Display the operation summary."""
     if skipped_files:
         print(f"\n⚠️  Skipped files ({len(skipped_files)}):")
         for file in sorted(skipped_files):
@@ -106,6 +118,21 @@ def organize(path: str, dry_run: bool = False) -> None:
     if skipped_files:
         print(f"   Skipped: {len(skipped_files)} files")
     print()
+
+
+def organize(path: str, dry_run: bool = False) -> None:
+    """Main organize function - orchestrates the file organization process."""
+    files_by_dir, skipped_files = analyze_files(path)
+    display_header(path, dry_run)
+
+    total_files = 0
+    for dest_dir, files in files_by_dir.items():
+        if files:
+            moved_count, failed_files = process_directory(path, dest_dir, files, dry_run)
+            total_files += moved_count
+            skipped_files.extend(failed_files)
+
+    display_summary(total_files, skipped_files, dry_run)
 
 
 if args.dry_run:
