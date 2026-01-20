@@ -32,7 +32,7 @@ Before you begin, ensure you have met the following requirements:
 
 - You have installed the latest version of `python3`
 
-## Installing backlog
+## Installing orgpy
 
 To install orgpy, follow these steps:
 
@@ -47,14 +47,16 @@ ln -sfnv "$PWD/orgpy.py" ~/Applications/bin/orgpy
 
 ```bash
 USAGE:
-    orgpy [-h] [-p path] [--dry-run]
+    orgpy [-h] [-p path] [-c CONFIG_FILE] [--config-path] [--dry-run]
 
 Organize your digital mess.
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  -p path, --path path  The directory path to organize.
-  [Default: current working directory]
+  -p, --path path       The directory path to organize.
+  -c, --config CONFIG_FILE
+                        Path to custom configuration file.
+  --config-path         Show configuration file path and exit.
   --dry-run             Preview changes without actually moving files.
 
 Visit github.com/2KAbhishek/orgpy for more.
@@ -62,7 +64,19 @@ Visit github.com/2KAbhishek/orgpy for more.
 EXAMPLE:
 orgpy ~/Downloads # Organizes your downloads directory
 orgpy --dry-run   # Preview what would be organized
+```
 
+### Configuration
+
+orgpy automatically creates a config file at `~/.config/orgpy.json` on first run with default file categories.
+You can customize this file to add your own categories or modify existing ones.
+
+```bash
+# Show config file location
+orgpy --config-path
+
+# Use custom config file
+orgpy --config /path/to/custom/config.json
 ```
 
 ### Running Tests
@@ -76,9 +90,5 @@ python3 tests/test_orgpy.py
 # Or run with module discovery
 python3 -m unittest discover tests -v
 ```
-
-### To-Do
-
-- [ ] Add better configuration system
 
 Hit the ⭐ button if you found this useful.
