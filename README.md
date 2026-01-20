@@ -47,28 +47,38 @@ ln -sfnv "$PWD/orgpy.py" ~/Applications/bin/orgpy
 
 ```bash
 USAGE:
-    orgpy [-h] [-p path]
+    orgpy [-h] [-p path] [--dry-run]
 
-Organize yor digital mess.
+Organize your digital mess.
 
 optional arguments:
   -h, --help            show this help message and exit
   -p path, --path path  The directory path to organize.
   [Default: current working directory]
+  --dry-run             Preview changes without actually moving files.
 
 Visit github.com/2KAbhishek/orgpy for more.
 
 EXAMPLE:
 orgpy ~/Downloads # Organizes your downloads directory
+orgpy --dry-run   # Preview what would be organized
 
+```
+
+### Running Tests
+
+The project includes a comprehensive test suite with **zero external dependencies** (uses only Python's built-in `unittest`):
+
+```bash
+# Run all tests
+python3 tests/test_orgpy.py
+
+# Or run with module discovery
+python3 -m unittest discover tests -v
 ```
 
 ### To-Do
 
-- [x] Setup repo
-- [ ] Add colors
 - [ ] Add better configuration system
 
-Hit the :star: button if you found this useful.
-
-### More Info
+Hit the ⭐ button if you found this useful.
