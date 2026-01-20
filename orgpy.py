@@ -3,82 +3,61 @@ import argparse
 import os
 from collections import defaultdict
 
-# Directory mapping, maps file extensions to directories
-dir_map = {'.pdf': 'Docs' + os.sep + 'PDF'}
+FILE_CATEGORIES = {
+    'Docs': ['.md', '.txt'],
+    'Docs/PDF': ['.pdf'],
+    'Docs/Word': ['.doc', '.docx', '.odt', '.rtf'],
+    'Docs/Sheets': ['.ods', '.xls', '.xlsm', '.xlsx'],
+    'Docs/Presentations': ['.key', '.odp', '.pps', '.ppt', '.pptx'],
 
-dir_map.update(dict.fromkeys(['.md', '.txt'], 'Docs'))
+    'Images': ['.ai', '.bmp', '.gif', '.ico', '.jpeg', '.jpg', '.png',
+               '.ps', '.psd', '.svg', '.tif', '.tiff', '.webp'],
 
-# Word files
-dir_map.update(dict.fromkeys(
-    ['.doc', '.docx', '.odt', '.rtf'], 'Docs' + os.sep + 'Word'))
+    'Audio': ['.aif', '.cda', '.mid', '.mp3', '.mpa', '.ogg',
+              '.wav', '.wma', '.wpl'],
 
-# Sheets
-dir_map.update(dict.fromkeys(
-    ['.ods', '.xls', '.xlsm', '.xlsx'], 'Docs' + os.sep + 'Sheets'))
+    'Videos': ['.3g2', '.3gp', '.avi', '.flv', '.h264', '.m4v', '.mkv',
+               '.mov', '.mp4', '.mpg', '.rm', '.swf', '.vob', '.wmv'],
 
-# Presentations
-dir_map.update(dict.fromkeys(
-    ['.key', '.odp', '.pps', '.ppt', '.pptx'], 'Docs' + os.sep + 'Presentations'))
+    'Archives': ['.7z', '.arj', '.bz2', '.gz', '.lz4', '.rar',
+                 '.tar', '.xz', '.z', '.zip', '.zstd'],
 
-# Images
-dir_map.update(dict.fromkeys(['.ai', '.bmp', '.gif', '.ico', '.jpeg',
-                              '.jpg', '.png', '.ps', '.psd', '.svg', '.tif', '.tiff', '.webp'], 'Images'))
+    'Programs': ['.apk', '.bin', '.deb', '.exe', '.jar', '.msi', '.rpm'],
 
-# Audio
-dir_map.update(dict.fromkeys(
-    ['.aif', '.cda', '.mid', '.mp3', '.mpa', '.ogg', '.wav', '.wma', '.wpl'], 'Audio'))
+    'Code': ['.c', '.cpp', '.java', '.py', '.js', '.class', '.h', '.sh',
+             '.bat', '.css', '.go', '.rs', '.cs', '.swift', '.r', '.php',
+             '.dart', '.kt', '.mat', '.pl', '.rb', '.scala'],
 
-# Videos
-dir_map.update(dict.fromkeys(['.3g2', '.3gp', '.avi', '.flv', '.h264', '.m4v',
-                              '.mkv', '.mov', '.mp4', '.mpg', '.rm', '.swf', '.vob', '.wmv'], 'Videos'))
+    'Code/Markup': ['.html', '.xml', '.xhtml', '.mhtml'],
+    'Code/Database': ['.sql', '.db', '.json', '.csv'],
+}
 
-# Archives
-dir_map.update(dict.fromkeys(['.7z', '.arj', '.bz2',  '.gz', '.lz4',
-                              '.rar', '.tar', '.xz', '.z', '.zip', '.zstd'], 'Archives'))
+dir_map = {}
+for directory, extensions in FILE_CATEGORIES.items():
+    for ext in extensions:
+        dir_map[ext.lower()] = directory.replace('/', os.sep)
 
-# Programs
-dir_map.update(dict.fromkeys(
-    ['.apk', '.bin', '.deb', '.exe', '.jar', '.msi', '.rpm'], 'Programs'))
-
-# Code
-dir_map.update(dict.fromkeys(['.c', '.cpp', '.java', '.py', '.js', '.class', '.h', '.sh', '.bat', '.css',
-                              '.go', '.rs', '.cs', '.swift', '.r', '.php', '.dart', '.kt', '.mat', '.pl', '.rb', '.scala'], 'Code'))
-
-# Markup
-dir_map.update(dict.fromkeys(
-    ['.html', '.xml', '.xhtml', '.mhtml'], 'Code' + os.sep + 'Markup'))
-
-# Database
-dir_map.update(dict.fromkeys(
-    ['.sql', '.db', '.json', '.csv'], 'Code' + os.sep + 'Database'))
-
-# Initialize parser
 parser = argparse.ArgumentParser(prog="orgpy", description="Organize yor digital mess.",
                                  epilog="Visit github.com/2KAbhishek/orgpy for more.")
 
-# Optional path
 parser.add_argument("-p", "--path", metavar="path", type=str, default=os.getcwd(),
                     help="The directory path to organize.")
 
-# Dry run flag
 parser.add_argument("--dry-run", action="store_true",
                     help="Preview changes without actually moving files.")
 
 args = parser.parse_args()
 
-# Use current dir if path is not specified or incorrect
 path = os.getcwd()
 
 if args.path and os.path.exists(args.path):
     path = args.path
 
 
-# Main organize method
 def organize(path: str, dry_run: bool = False) -> None:
     files_by_dir = defaultdict(list)
     skipped_files = []
 
-    # Group files by destination directory
     for file in os.listdir(path):
         if os.path.isfile(os.path.join(path, file)):
             file_name, ext = os.path.splitext(file)
@@ -87,7 +66,6 @@ def organize(path: str, dry_run: bool = False) -> None:
             else:
                 skipped_files.append(file)
 
-    # Display organized output
     if dry_run:
         print(f"\n🔍 DRY RUN - Preview for: {os.path.basename(path)}")
         print("=" * 50)
@@ -118,13 +96,11 @@ def organize(path: str, dry_run: bool = False) -> None:
             if dry_run:
                 total_files += len(files)
 
-    # Show skipped files
     if skipped_files:
         print(f"\n⚠️  Skipped files ({len(skipped_files)}):")
         for file in sorted(skipped_files):
             print(f"   • {file}")
 
-    # Summary
     action = "Would organize" if dry_run else "Organized"
     print(f"\n📊 Summary: {action} {total_files} files")
     if skipped_files:
