@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import os
+from collections import defaultdict
 
 # Directory mapping, maps file extensions to directories
 dir_map = {'.txt': 'Docs', '.pdf': 'Docs' + os.sep + 'PDF'}
@@ -72,30 +73,66 @@ if args.path and os.path.exists(args.path):
 
 # Main organize method
 def organize(path: str, dry_run: bool = False) -> None:
+    files_by_dir = defaultdict(list)
+    skipped_files = []
+    
+    # Group files by destination directory
     for file in os.listdir(path):
-        file_name, ext = os.path.splitext(os.path.join(path, file))
-        try:
-            if dry_run:
-                print("Would move: " + file + " -> " +
-                      os.path.join(dir_map[ext], file))
+        if os.path.isfile(os.path.join(path, file)):
+            file_name, ext = os.path.splitext(file)
+            if ext.lower() in dir_map:
+                files_by_dir[dir_map[ext.lower()]].append(file)
             else:
-                if not os.path.exists(os.path.join(path, dir_map[ext])):
-                    os.makedirs(os.path.join(path, dir_map[ext]))
-
-                os.replace(os.path.join(path, file),
-                           os.path.join(path, dir_map[ext], file))
-
-                print("Moved: " + file + " -> " +
-                      os.path.join(dir_map[ext], file))
-        except:
-            print("Skipped: " + file)
+                skipped_files.append(file)
+    
+    # Display organized output
+    if dry_run:
+        print(f"\n🔍 DRY RUN - Preview for: {os.path.basename(path)}")
+        print("=" * 50)
+    else:
+        print(f"\n📂 Organizing: {os.path.basename(path)}")
+        print("=" * 50)
+    
+    total_files = 0
+    for dest_dir, files in files_by_dir.items():
+        if files:
+            print(f"\n📁 {dest_dir}/ ({len(files)} files)")
+            for file in sorted(files):
+                if dry_run:
+                    print(f"   ➤ {file}")
+                else:
+                    try:
+                        if not os.path.exists(os.path.join(path, dest_dir)):
+                            os.makedirs(os.path.join(path, dest_dir))
+                        
+                        os.replace(os.path.join(path, file),
+                                 os.path.join(path, dest_dir, file))
+                        print(f"   ✅ {file}")
+                        total_files += 1
+                    except Exception as e:
+                        print(f"   ❌ {file} (Error: {str(e)})")
+                        skipped_files.append(file)
+            
+            if dry_run:
+                total_files += len(files)
+    
+    # Show skipped files
+    if skipped_files:
+        print(f"\n⚠️  Skipped files ({len(skipped_files)}):")
+        for file in sorted(skipped_files):
+            print(f"   • {file}")
+    
+    # Summary
+    action = "Would organize" if dry_run else "Organized"
+    print(f"\n📊 Summary: {action} {total_files} files")
+    if skipped_files:
+        print(f"   Skipped: {len(skipped_files)} files")
+    print()
 
 
 if args.dry_run:
-    print("DRY RUN MODE - No files will be moved")
     organize(path, dry_run=True)
-elif input("Organize directory: " + os.path.basename(path) + " ? -> ") in ['y', 'Y', 'yes', 'Yes']:
+elif input(f"Organize directory '{os.path.basename(path)}'? (y/N): ") in ['y', 'Y', 'yes', 'Yes']:
     organize(path)
-    print(os.listdir(path))
 else:
-    print("OK, Bye!")
+    print("Operation cancelled.")
