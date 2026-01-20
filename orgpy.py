@@ -7,7 +7,7 @@ dir_map = {'.txt': 'Docs', '.pdf': 'Docs' + os.sep + 'PDF'}
 
 # Word files
 dir_map.update(dict.fromkeys(
-    ['.doc', '.docx', '.odt', 'rtf'], 'Docs' + os.sep + 'Word'))
+    ['.doc', '.docx', '.odt', '.rtf'], 'Docs' + os.sep + 'Word'))
 
 # Sheets
 dir_map.update(dict.fromkeys(
@@ -57,6 +57,10 @@ parser = argparse.ArgumentParser(prog="orgpy", description="Organize yor digital
 parser.add_argument("-p", "--path", metavar="path", type=str, default=os.getcwd(),
                     help="The directory path to organize.")
 
+# Dry run flag
+parser.add_argument("--dry-run", action="store_true",
+                    help="Preview changes without actually moving files.")
+
 args = parser.parse_args()
 
 # Use current dir if path is not specified or incorrect
@@ -67,23 +71,30 @@ if args.path and os.path.exists(args.path):
 
 
 # Main organize method
-def organize(path: str) -> None:
+def organize(path: str, dry_run: bool = False) -> None:
     for file in os.listdir(path):
         file_name, ext = os.path.splitext(os.path.join(path, file))
         try:
-            if not os.path.exists(os.path.join(path, dir_map[ext])):
-                os.makedirs(os.path.join(path, dir_map[ext]))
+            if dry_run:
+                print("Would move: " + file + " -> " +
+                      os.path.join(dir_map[ext], file))
+            else:
+                if not os.path.exists(os.path.join(path, dir_map[ext])):
+                    os.makedirs(os.path.join(path, dir_map[ext]))
 
-            os.replace(os.path.join(path, file),
-                       os.path.join(path, dir_map[ext], file))
+                os.replace(os.path.join(path, file),
+                           os.path.join(path, dir_map[ext], file))
 
-            print("Moved: " + file + " -> " +
-                  os.path.join(dir_map[ext], file))
+                print("Moved: " + file + " -> " +
+                      os.path.join(dir_map[ext], file))
         except:
             print("Skipped: " + file)
 
 
-if input("Organize directory: " + os.path.basename(path) + " ? -> ") in ['y', 'Y', 'yes', 'Yes']:
+if args.dry_run:
+    print("DRY RUN MODE - No files will be moved")
+    organize(path, dry_run=True)
+elif input("Organize directory: " + os.path.basename(path) + " ? -> ") in ['y', 'Y', 'yes', 'Yes']:
     organize(path)
     print(os.listdir(path))
 else:
